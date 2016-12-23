@@ -1,2 +1,2 @@
-# Goblin2-Examples
+# Goblin2
 Code Examples for Goblin2
