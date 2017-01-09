@@ -25,7 +25,7 @@ void setup() {
 
 void loop() {
 
-   delay(5);  
+   delay(500);  
    RS485.write("#01");                       // Send # 01 to Serial by software (PIN7 and PIN8)
    RS485.write(13);                          // Send "ENTER" (ascii = 13) after # 01 to get sensor response  
  
