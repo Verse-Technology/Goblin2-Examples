@@ -1,0 +1,161 @@
+/*     EXAMPLE_UBIDOTS_RS-485
+  Receive the information the temperature sensor for protocol RS-485 and send this information 
+  to UBIDOTS.
+  
+  Check more documentation and examples in http://www.verse-technology.com/goblin2/
+ 
+  modified 20 Enero 2017.
+  by Puxitron.
+  -GOBLIN 2 TEAM. VERSE Technology.
+ */
+#include <SoftwareSerial.h>       // Library SoftwareSerial                      
+SoftwareSerial RS485(8,7);        //(RX=8,TX=7) Assign the serial by software
+SoftwareSerial SIM5320(3,4);      // RX, TX
+
+char DATO_TEMP[10];               // Gets the full 8-character sensor response
+char TEMP[10];                    // It saves only 4 characters of the 8 characters given by the sensor 
+
+String  token ="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";   // Token ubidots
+String  id    ="XXXXXXXXXXXXXXXXXXXXXXXX";         // Id variable ubidots
+
+void setup(){                        
+  SIM5320.begin(9600);                     // Speed transmission sim5320a
+  RS485.begin(9600);                       // Sensor transmission speed
+  pinMode(5, OUTPUT);                      // PIN ON SIM5320A
+  pinMode(8, INPUT);
+  pinMode(7, OUTPUT);
+  pinMode(3, INPUT);
+  pinMode(4, OUTPUT);
+  SIM5320A_ON();                           // ON SIM5320A
+  delay(10000);
+  SETUP_SIM5320();                         // Setup sim5320a NET                             
+}
+
+void loop() {
+  rs485();                               // Function rs485
+  WEB();                                 // Function WEB
+  delay(8000);                           // Sample time
+}
+
+void rs485(){ 
+   RS485.listen(); 
+   RS485.print("#01");                   // Send # 01 to Serial by software (PIN7 and PIN8)
+   RS485.write(0x0D);                    // Send "ENTER" (ascii = 13) after # 01 to get sensor response
+   delay(1000);                          // Delay
+   if(RS485.available()>0){              // Detects the information or response back, by the sensor  
+     for(int x=0;x<=7;x++){         
+     DATO_TEMP[x]=RS485.read();          // Saves the sensor response in the variable DATO_TEMP 
+                                 }
+                                    
+     for(int x=0;x<=7;x++){ 
+     TEMP[x]=DATO_TEMP[x+4];  
+                          } 
+
+                                }       
+  SIM5320.listen();                                      
+  delay(100);                                       
+}
+
+
+
+
+void WEB()                                  
+{
+  
+  int LONG_JSON = 15;
+  int SEND = 209;
+       
+  SIM5320.println(F("AT+CIPOPEN=0,\"TCP\",\"things.ubidots.com\",80"));  
+  delay(5000);  
+  SIM5320.print("AT+CIPSEND=0,");  
+  delay(50);
+  SIM5320.println(SEND);  
+  delay(600);
+  SIM5320.print(F("POST /api/v1.6/variables/"));
+  delay(50);
+  SIM5320.print(id);
+  delay(50);
+  SIM5320.println(F("/values  HTTP/1.1"));
+  delay(50);
+  SIM5320.println(F("Content-Type: application/json"));
+  delay(50);
+  SIM5320.print(F("Content-Length:"));
+  delay(50);
+  SIM5320.println(LONG_JSON);
+  delay(50);
+  SIM5320.print(F("X-Auth-Token: "));
+  delay(50);
+  SIM5320.println(token);
+  delay(50);
+  SIM5320.println(F("Host: things.ubidots.com"));
+  delay(50);
+  SIM5320.println("");
+  SIM5320.print("{\"value\":");
+  delay(10);
+  SIM5320.print(TEMP);
+  delay(50);
+  SIM5320.println("}");
+  delay(50);
+  SIM5320.write(0x1A);
+  delay(5000);
+  SIM5320.println(F("AT+CIPCLOSE=0"));
+  delay(4000);
+
+}
+
+void SIM5320A_ON()          
+{
+  digitalWrite(5, HIGH);
+  delay(2000);//                            
+  digitalWrite(5, LOW);
+  delay(2000);
+}
+ 
+void SETUP_SIM5320()
+{
+
+  SIM5320.println(F("AT+CFUN=1"));                      // SIM5320 WORKING WITH ALL THE FEATURES
+  delay(250);
+
+  SIM5320.println(F("AT+CNMP=2"));                      
+  delay(250);
+
+  SIM5320.println(F("AT+CVAUXV=61"));                   // 3.0V Output voltage
+  delay(250);
+
+  SIM5320.println(F("AT+CNBP=0x0000000004000000"));     // 3G 850MHZ TELCEL 0x0000000004000000 hspda     2G 1900MHZ TELCEL AT+CNBP=0x0000000000200000 edge
+  delay(500);
+
+  SIM5320.println(F("AT+CSQ"));                         // Signal level
+  delay(250);
+
+  SIM5320.println(F("AT+CREG?"));          
+  delay(250);
+
+  SIM5320.println(F("AT+COPS?"));
+  delay(250);
+ 
+  SIM5320.println(F("AT+CGSOCKCONT=1,\"IP\",\"internet.itelcel.com\"")); //APN
+  delay(250);
+
+  SIM5320.println(F("AT+CNSMOD?"));                      // Sample name of the network
+  delay(250);
+
+  SIM5320.println(F("AT+CSOCKSETPN=1"));
+  delay(250);
+
+  SIM5320.println(F("AT+CIPMODE=0"));
+  delay(250);
+
+  SIM5320.println(F("AT+CNBP?"));
+  delay(250);
+
+  SIM5320.println(F("AT+NETOPEN"));                      // Open the NET
+  delay(15000); 
+
+  SIM5320.println(F("AT+IPADDR"));                       // Local IP 
+  delay(500);
+
+  SIM5320.println(F("AT+CGSN"));                         // IMEI
+  delay(500);
+}
